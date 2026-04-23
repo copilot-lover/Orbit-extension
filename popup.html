@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orbit Focus Guard</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <h1>Orbit Focus Guard</h1>
+      <p>Pomodoro + task-linked sessions + configurable goal tracking.</p>
+    </header>
+
+    <section class="card timer">
+      <div class="phase" id="phaseLabel">Focus</div>
+      <div class="countdown" id="countdown">25:00</div>
+      <div class="buttons">
+        <button hx-on:click="window.orbitUI.start()">Start</button>
+        <button hx-on:click="window.orbitUI.pause()">Pause</button>
+        <button hx-on:click="window.orbitUI.resume()">Resume</button>
+        <button hx-on:click="window.orbitUI.skip()">Skip</button>
+        <button class="ghost" hx-on:click="window.orbitUI.reset()">Reset</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Progress tracker (manual)</h2>
+      <p class="muted">Your progress won't auto-increase. Update it manually.</p>
+      <div class="progressline"><span id="hourProgress">0 / 64h</span></div>
+      <div class="row">
+        <label>Current (X)
+          <input id="manualHours" type="number" min="0" step="0.1" />
+        </label>
+        <label>Goal
+          <input id="goalHours" type="number" min="1" step="1" />
+        </label>
+      </div>
+      <div class="buttons">
+        <button id="minusHalf">-0.5h</button>
+        <button id="plusHalf">+0.5h</button>
+        <button id="saveProgress">Save Progress</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Tasks (focus session linked)</h2>
+      <form id="taskForm" class="row">
+        <input id="taskInput" placeholder="Write report section" required />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="taskList"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Quick settings</h2>
+      <div class="grid2">
+        <label>Focus <input id="focusMinutes" type="number" min="1" max="180" /></label>
+        <label>Short break <input id="shortBreakMinutes" type="number" min="1" max="60" /></label>
+        <label>Long break <input id="longBreakMinutes" type="number" min="1" max="90" /></label>
+        <label>Long break every <input id="longBreakEvery" type="number" min="2" max="10" /></label>
+      </div>
+      <div class="row checks">
+        <label><input id="autoStartBreaks" type="checkbox" /> Auto-start breaks</label>
+        <label><input id="autoStartFocus" type="checkbox" /> Auto-start focus</label>
+      </div>
+      <div class="buttons">
+        <a class="link" href="options.html" target="_blank">Full blocker settings</a>
+        <button id="saveSettings">Save</button>
+      </div>
+    </section>
+  </main>
+  <script src="vendor/htmx.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

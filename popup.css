@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark;
+  --bg: #070b16;
+  --panel: #0f172a;
+  --line: #23304f;
+  --text: #e6edf7;
+  --muted: #9db0d0;
+  --accent: #68e1fd;
+  --accent2: #8b5cf6;
+}
+body { margin: 0; min-width: 420px; background: radial-gradient(circle at top, #16223f, var(--bg)); color: var(--text); font: 14px/1.45 Inter, system-ui, sans-serif; }
+.app { padding: 12px; display: grid; gap: 12px; }
+.hero { background: linear-gradient(120deg, rgba(104,225,253,.16), rgba(139,92,246,.18)); border: 1px solid #35456f; border-radius: 14px; padding: 12px; }
+.hero h1 { margin: 0; font-size: 18px; }
+.hero p { margin: 4px 0 0; color: var(--muted); }
+.card { background: color-mix(in srgb, var(--panel) 88%, #000); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+h2 { margin: 0 0 8px; font-size: 14px; }
+.phase { color: var(--accent); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+.countdown { font-size: 42px; font-weight: 800; text-align: center; margin: 8px 0 10px; }
+.buttons, .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button, .link { background: linear-gradient(180deg, #67e8f9, #22d3ee); color: #06263c; border: none; border-radius: 10px; padding: 7px 11px; font-weight: 700; cursor: pointer; text-decoration: none; }
+button.ghost { background: #172036; color: #b8c8e6; border: 1px solid #304062; }
+input { background: #0a1222; color: var(--text); border: 1px solid #33476f; border-radius: 10px; padding: 7px; }
+label { display: grid; gap: 5px; color: #cad8ef; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.progressline { margin: 6px 0 10px; font-size: 18px; font-weight: 800; color: #c7d2fe; }
+.muted { color: var(--muted); margin: 0 0 8px; }
+ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 7px; }
+li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; background: #0a1222; border: 1px solid #1f2d4d; padding: 7px; border-radius: 10px; }
+li.done span { text-decoration: line-through; color: var(--muted); }
+.checks label { display: flex; gap: 6px; align-items: center; }

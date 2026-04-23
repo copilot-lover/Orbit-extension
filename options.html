@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Orbit Focus Guard Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main>
+    <h1>Orbit Focus Guard - Site Blocker</h1>
+    <p>
+      Chrome extensions cannot be truly uninstall-proof or impossible to bypass.
+      This blocker uses Chrome network rules and now supports break-time unblocking.
+    </p>
+
+    <section class="card">
+      <h2>Mode</h2>
+      <label><input type="radio" name="mode" value="focusOnly" /> Block only during running focus sessions</label>
+      <label><input type="radio" name="mode" value="always" /> Always block listed sites (except break unblocks)</label>
+      <label><input type="radio" name="mode" value="off" /> Off</label>
+    </section>
+
+    <section class="card">
+      <h2>Blocked sites/domains (one per line)</h2>
+      <textarea id="sites" placeholder="youtube.com\nreddit.com"></textarea>
+    </section>
+
+    <section class="card">
+      <h2>Allowed during breaks only (one per line)</h2>
+      <p>These domains are unblocked when timer phase is Short Break or Long Break.</p>
+      <textarea id="breakSites" placeholder="youtube.com"></textarea>
+      <button id="save">Save blocker settings</button>
+    </section>
+  </main>
+
+  <script src="vendor/htmx.min.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
