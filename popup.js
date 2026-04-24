@@ -87,6 +87,12 @@ window.orbitUI = {
   async skip() { await send("skip"); await refresh(); }
 };
 
+$("#startBtn").addEventListener("click", () => window.orbitUI.start());
+$("#pauseBtn").addEventListener("click", () => window.orbitUI.pause());
+$("#resumeBtn").addEventListener("click", () => window.orbitUI.resume());
+$("#skipBtn").addEventListener("click", () => window.orbitUI.skip());
+$("#resetBtn").addEventListener("click", () => window.orbitUI.reset());
+
 $("#taskForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const title = $("#taskInput").value.trim();

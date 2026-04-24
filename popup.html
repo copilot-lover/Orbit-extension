@@ -17,11 +17,11 @@
       <div class="phase" id="phaseLabel">Focus</div>
       <div class="countdown" id="countdown">25:00</div>
       <div class="buttons">
-        <button hx-on:click="window.orbitUI.start()">Start</button>
-        <button hx-on:click="window.orbitUI.pause()">Pause</button>
-        <button hx-on:click="window.orbitUI.resume()">Resume</button>
-        <button hx-on:click="window.orbitUI.skip()">Skip</button>
-        <button class="ghost" hx-on:click="window.orbitUI.reset()">Reset</button>
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resumeBtn">Resume</button>
+        <button id="skipBtn">Skip</button>
+        <button id="resetBtn" class="ghost">Reset</button>
       </div>
     </section>
 
@@ -71,7 +71,6 @@
       </div>
     </section>
   </main>
-  <script src="vendor/htmx.min.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
