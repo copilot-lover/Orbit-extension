@@ -27,6 +27,49 @@ const DEFAULT_STATE = {
 };
 
 const ALARM_NAME = "orbit-phase-end";
+const DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
+
+function clampNumber(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeDomain(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return null;
+  const withoutProtocol = raw.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const hostOnly = withoutProtocol.split("/")[0].split("?")[0].split("#")[0].replace(/^\*\./, "");
+  if (!DOMAIN_PATTERN.test(hostOnly)) return null;
+  return hostOnly;
+}
+
+function normalizeDomainList(list) {
+  const unique = new Set();
+  for (const item of list || []) {
+    const normalized = normalizeDomain(item);
+    if (normalized) unique.add(normalized);
+  }
+  return [...unique];
+}
+
+function sanitizeSettingsPatch(patch) {
+  const sanitized = {};
+  if ("focusMinutes" in patch) sanitized.focusMinutes = clampNumber(patch.focusMinutes, 25, 1, 180);
+  if ("shortBreakMinutes" in patch) sanitized.shortBreakMinutes = clampNumber(patch.shortBreakMinutes, 5, 1, 60);
+  if ("longBreakMinutes" in patch) sanitized.longBreakMinutes = clampNumber(patch.longBreakMinutes, 15, 1, 90);
+  if ("longBreakEvery" in patch) sanitized.longBreakEvery = clampNumber(patch.longBreakEvery, 4, 2, 10);
+  if ("goalHours" in patch) sanitized.goalHours = clampNumber(patch.goalHours, 64, 1, 10000);
+  if ("autoStartBreaks" in patch) sanitized.autoStartBreaks = Boolean(patch.autoStartBreaks);
+  if ("autoStartFocus" in patch) sanitized.autoStartFocus = Boolean(patch.autoStartFocus);
+  if ("blockerMode" in patch) {
+    const allowed = new Set(["focusOnly", "always", "off"]);
+    sanitized.blockerMode = allowed.has(patch.blockerMode) ? patch.blockerMode : "focusOnly";
+  }
+  if ("blockedSites" in patch) sanitized.blockedSites = normalizeDomainList(patch.blockedSites);
+  if ("breakUnblockSites" in patch) sanitized.breakUnblockSites = normalizeDomainList(patch.breakUnblockSites);
+  return sanitized;
+}
 
 async function getState() {
   const data = await chrome.storage.local.get(["orbitState"]);
@@ -69,8 +112,8 @@ function isBreakPhase(state) {
 }
 
 function toUrlFilter(domain) {
-  const cleaned = domain.replace(/^https?:\/\//, "").replace(/^\*\./, "").trim();
-  return `||${cleaned}^`;
+  const cleaned = normalizeDomain(domain);
+  return cleaned ? `||${cleaned}^` : null;
 }
 
 async function applyBlockingRules(state) {
@@ -84,21 +127,27 @@ async function applyBlockingRules(state) {
     return;
   }
 
-  const blockedSites = state.settings.blockedSites.filter(Boolean);
-  const breakUnblockSet = new Set((state.settings.breakUnblockSites || []).map((s) => s.trim()).filter(Boolean));
+  const blockedSites = normalizeDomainList(state.settings.blockedSites);
+  const breakUnblockSet = new Set(normalizeDomainList(state.settings.breakUnblockSites));
   const effectiveBlockedSites = isBreakPhase(state)
-    ? blockedSites.filter((site) => !breakUnblockSet.has(site.trim()))
+    ? blockedSites.filter((site) => !breakUnblockSet.has(site))
     : blockedSites;
 
-  const addRules = effectiveBlockedSites.map((domain, i) => ({
-    id: i + 1,
-    priority: 1,
-    action: { type: "block" },
-    condition: {
-      urlFilter: toUrlFilter(domain),
-      resourceTypes: ["main_frame", "sub_frame"]
-    }
-  }));
+  const addRules = effectiveBlockedSites
+    .map((domain, i) => {
+      const urlFilter = toUrlFilter(domain);
+      if (!urlFilter) return null;
+      return {
+        id: i + 1,
+        priority: 1,
+        action: { type: "block" },
+        condition: {
+          urlFilter,
+          resourceTypes: ["main_frame", "sub_frame"]
+        }
+      };
+    })
+    .filter(Boolean);
 
   await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
 }
@@ -189,7 +238,7 @@ async function resetTimer() {
 
 async function updateSettings(patch) {
   const state = await getState();
-  state.settings = { ...state.settings, ...patch };
+  state.settings = { ...state.settings, ...sanitizeSettingsPatch(patch || {}) };
   await applyBlockingRules(state);
   await saveState(state);
 }
@@ -227,7 +276,14 @@ async function getViewState() {
 
 chrome.runtime.onInstalled.addListener(async () => {
   const existing = await chrome.storage.local.get(["orbitState"]);
-  if (!existing.orbitState) await saveState(DEFAULT_STATE);
+  if (!existing.orbitState) {
+    await saveState(DEFAULT_STATE);
+    return;
+  }
+  const current = await getState();
+  current.settings.blockedSites = normalizeDomainList(current.settings.blockedSites);
+  current.settings.breakUnblockSites = normalizeDomainList(current.settings.breakUnblockSites);
+  await saveState(current);
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -253,29 +309,34 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   (async () => {
-    switch (message.type) {
-      case "getState": sendResponse(await getViewState()); break;
-      case "start": await startTimer(message.activeTaskId || null); sendResponse({ ok: true }); break;
-      case "pause": await pauseTimer(); sendResponse({ ok: true }); break;
-      case "resume": await resumeTimer(); sendResponse({ ok: true }); break;
-      case "reset": await resetTimer(); sendResponse({ ok: true }); break;
-      case "skip": {
-        const state = await getState();
-        if (state.timer.phase === "focus") {
-          state.timer.completedFocusCount += 1;
-          await transitionToPhase(state, nextBreakPhase(state), false);
-        } else {
-          await transitionToPhase(state, "focus", false);
+    try {
+      switch (message.type) {
+        case "getState": sendResponse(await getViewState()); break;
+        case "start": await startTimer(message.activeTaskId || null); sendResponse({ ok: true }); break;
+        case "pause": await pauseTimer(); sendResponse({ ok: true }); break;
+        case "resume": await resumeTimer(); sendResponse({ ok: true }); break;
+        case "reset": await resetTimer(); sendResponse({ ok: true }); break;
+        case "skip": {
+          const state = await getState();
+          if (state.timer.phase === "focus") {
+            state.timer.completedFocusCount += 1;
+            await transitionToPhase(state, nextBreakPhase(state), false);
+          } else {
+            await transitionToPhase(state, "focus", false);
+          }
+          sendResponse({ ok: true });
+          break;
         }
-        sendResponse({ ok: true });
-        break;
+        case "updateSettings": await updateSettings(message.patch || {}); sendResponse({ ok: true }); break;
+        case "updateManualProgress": await updateManualProgress(message.hours); sendResponse({ ok: true }); break;
+        case "addTask": await addTask(message.title || ""); sendResponse({ ok: true }); break;
+        case "toggleTask": await toggleTask(message.taskId); sendResponse({ ok: true }); break;
+        case "deleteTask": await deleteTask(message.taskId); sendResponse({ ok: true }); break;
+        default: sendResponse({ ok: false, error: "unknown message" });
       }
-      case "updateSettings": await updateSettings(message.patch || {}); sendResponse({ ok: true }); break;
-      case "updateManualProgress": await updateManualProgress(message.hours); sendResponse({ ok: true }); break;
-      case "addTask": await addTask(message.title || ""); sendResponse({ ok: true }); break;
-      case "toggleTask": await toggleTask(message.taskId); sendResponse({ ok: true }); break;
-      case "deleteTask": await deleteTask(message.taskId); sendResponse({ ok: true }); break;
-      default: sendResponse({ ok: false, error: "unknown message" });
+    } catch (error) {
+      console.error("Orbit message handler error", error);
+      sendResponse({ ok: false, error: "internal error" });
     }
   })();
   return true;
